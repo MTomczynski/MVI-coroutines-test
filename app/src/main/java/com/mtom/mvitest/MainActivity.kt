@@ -11,6 +11,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flattenMerge
@@ -26,6 +27,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: MainViewModel
+    private val viewState: ReceiveChannel<ViewState> by lazy { viewModel.viewState }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,7 +43,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
     private fun initViewModelObservers() {
         launch {
             while (isActive) {
-                viewModel.viewState.receive().render()
+                viewState.receive().render()
             }
         }
 
@@ -54,6 +56,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
     override fun onDestroy() {
         super.onDestroy()
+        viewState.cancel()
         cancel()
     }
 

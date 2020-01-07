@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 class MainViewModel : ViewModel(), CoroutineScope by MainScope() {
 
     private val _viewState: ConflatedBroadcastChannel<ViewState> = ConflatedBroadcastChannel()
-    val viewState: ReceiveChannel<ViewState> = _viewState.openSubscription()
+    val viewState: ReceiveChannel<ViewState>
+        get() = _viewState.openSubscription()
 
     private val _viewEffect: Channel<ViewEffect> = Channel()
     val viewEffect: ReceiveChannel<ViewEffect>
@@ -51,9 +52,5 @@ class MainViewModel : ViewModel(), CoroutineScope by MainScope() {
     override fun onCleared() {
         super.onCleared()
         cancel()
-        viewState.cancel()
     }
 }
-
-
-
