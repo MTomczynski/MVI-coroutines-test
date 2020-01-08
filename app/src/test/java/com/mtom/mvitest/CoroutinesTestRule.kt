@@ -15,7 +15,7 @@ class CoroutinesTestRule(
 
     override fun starting(description: Description?) {
         super.starting(description)
-        Dispatchers.setMain(testDispatcher)
+        Dispatchers.setMain(TestCoroutineDispatcher())
     }
 
     override fun finished(description: Description?) {

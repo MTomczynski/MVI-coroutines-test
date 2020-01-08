@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 @ExperimentalCoroutinesApi
-class MainViewModel(scope: CoroutineScope = MainScope()) : ViewModel(), CoroutineScope by scope {
+class MainViewModel(private val coroutineScope: CoroutineScope = MainScope()) : ViewModel() {
 
     private val _viewState: ConflatedBroadcastChannel<ViewState> = ConflatedBroadcastChannel()
     val viewState: ReceiveChannel<ViewState>
@@ -28,11 +28,11 @@ class MainViewModel(scope: CoroutineScope = MainScope()) : ViewModel(), Coroutin
     fun process(event: ViewEvent) {
         mapToPartialState(event)
             .onEach { _viewState.send(it.reduce(_viewState.valueOrNull ?: ViewState())) }
-            .launchIn(this)
+            .launchIn(coroutineScope)
 
         mapToViewEffect(event)
             .onEach { _viewEffect.send(it) }
-            .launchIn(this)
+            .launchIn(coroutineScope)
     }
 
     private fun mapToPartialState(event: ViewEvent): Flow<PartialState> = callbackFlow {
@@ -61,6 +61,6 @@ class MainViewModel(scope: CoroutineScope = MainScope()) : ViewModel(), Coroutin
 
     override fun onCleared() {
         super.onCleared()
-        cancel()
+        coroutineScope.cancel()
     }
 }

@@ -11,7 +11,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flattenMerge
@@ -23,11 +22,11 @@ import kotlinx.coroutines.launch
 
 @FlowPreview
 @ExperimentalCoroutinesApi
-class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
+class MainActivity : AppCompatActivity() {
 
+    private val coroutineScope: CoroutineScope = MainScope()
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: MainViewModel
-    private val viewState: ReceiveChannel<ViewState> by lazy { viewModel.viewState }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,18 +35,20 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
         viewModel = ViewModelProviders.of(this)[MainViewModel::class.java]
         viewEvents()
             .onEach { event -> viewModel.process(event) }
-            .launchIn(this)
+            .launchIn(coroutineScope)
         initViewModelObservers()
     }
 
     private fun initViewModelObservers() {
-        launch {
+        coroutineScope.launch {
+            val viewState = viewModel.viewState
             while (isActive) {
                 viewState.receive().render()
             }
+            viewState.cancel()
         }
 
-        launch {
+        coroutineScope.launch {
             while (isActive) {
                 viewModel.viewEffect.receive().trigger()
             }
@@ -56,8 +57,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewState.cancel()
-        cancel()
+        coroutineScope.cancel()
     }
 
     @SuppressLint("SetTextI18n")
