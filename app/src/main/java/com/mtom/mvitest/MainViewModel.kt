@@ -9,6 +9,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @ExperimentalCoroutinesApi
@@ -24,28 +27,38 @@ class MainViewModel : ViewModel(), CoroutineScope by MainScope() {
 
     fun process(event: ViewEvent) {
         launch {
-            _viewState.offer(
-                event.mapToPartialState().reduce(_viewState.valueOrNull ?: ViewState())
-            )
+            mapToPartialState(event).collect { partialState ->
+                _viewState.send(
+                    partialState.reduce(_viewState.valueOrNull ?: ViewState())
+                )
+            }
         }
-        launch { _viewEffect.offer(event.mapToViewEffect()) }
+        launch {
+            mapToViewEffect(event).collect { _viewEffect.send(it) }
+        }
     }
 
-    private suspend fun ViewEvent.mapToPartialState(): PartialState = when (this) {
-        ViewEvent.Instant -> PartialState.InstantClicked
-        ViewEvent.OneSec -> PartialState.OneSecClicked
-        ViewEvent.FiveSec -> PartialState.FiveSecClicked
+    private suspend fun mapToPartialState(event: ViewEvent): Flow<PartialState> = callbackFlow {
+        offer(
+            when (event) {
+                ViewEvent.Instant -> PartialState.InstantClicked
+                ViewEvent.OneSec -> PartialState.OneSecClicked
+                ViewEvent.FiveSec -> PartialState.FiveSecClicked
+            }
+        )
     }
 
-    private suspend fun ViewEvent.mapToViewEffect(): ViewEffect = when (this) {
-        ViewEvent.Instant -> ViewEffect.InstantToast
-        ViewEvent.OneSec -> {
-            delay(1000)
-            ViewEffect.OneSecToast
-        }
-        ViewEvent.FiveSec -> {
-            delay(5000)
-            ViewEffect.FiveSecToast
+    private suspend fun mapToViewEffect(event: ViewEvent): Flow<ViewEffect> = callbackFlow {
+        when (event) {
+            ViewEvent.Instant -> offer(ViewEffect.InstantToast)
+            ViewEvent.OneSec -> {
+                delay(1000)
+                offer(ViewEffect.OneSecToast)
+            }
+            ViewEvent.FiveSec -> {
+                delay(5000)
+                offer(ViewEffect.FiveSecToast)
+            }
         }
     }
 
