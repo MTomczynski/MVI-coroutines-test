@@ -11,11 +11,11 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 @ExperimentalCoroutinesApi
-class MainViewModel : ViewModel(), CoroutineScope by MainScope() {
+class MainViewModel(scope: CoroutineScope = MainScope()) : ViewModel(), CoroutineScope by scope {
 
     private val _viewState: ConflatedBroadcastChannel<ViewState> = ConflatedBroadcastChannel()
     val viewState: ReceiveChannel<ViewState>
@@ -26,19 +26,16 @@ class MainViewModel : ViewModel(), CoroutineScope by MainScope() {
         get() = _viewEffect
 
     fun process(event: ViewEvent) {
-        launch {
-            mapToPartialState(event).collect { partialState ->
-                _viewState.send(
-                    partialState.reduce(_viewState.valueOrNull ?: ViewState())
-                )
-            }
-        }
-        launch {
-            mapToViewEffect(event).collect { _viewEffect.send(it) }
-        }
+        mapToPartialState(event)
+            .onEach { _viewState.send(it.reduce(_viewState.valueOrNull ?: ViewState())) }
+            .launchIn(this)
+
+        mapToViewEffect(event)
+            .onEach { _viewEffect.send(it) }
+            .launchIn(this)
     }
 
-    private suspend fun mapToPartialState(event: ViewEvent): Flow<PartialState> = callbackFlow {
+    private fun mapToPartialState(event: ViewEvent): Flow<PartialState> = callbackFlow {
         offer(
             when (event) {
                 ViewEvent.Instant -> PartialState.InstantClicked
@@ -48,7 +45,7 @@ class MainViewModel : ViewModel(), CoroutineScope by MainScope() {
         )
     }
 
-    private suspend fun mapToViewEffect(event: ViewEvent): Flow<ViewEffect> = callbackFlow {
+    private fun mapToViewEffect(event: ViewEvent): Flow<ViewEffect> = callbackFlow {
         when (event) {
             ViewEvent.Instant -> offer(ViewEffect.InstantToast)
             ViewEvent.OneSec -> {
