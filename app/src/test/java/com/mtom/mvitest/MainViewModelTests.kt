@@ -9,25 +9,26 @@ import org.junit.Test
 @ExperimentalCoroutinesApi
 class MainViewModelTests {
 
-    private val viewModel = MainViewModel()
-
     @get:Rule
     var coroutinesTestRule = CoroutinesTestRule()
 
     @Test
     fun `is instant view event translated to instant view state`() = runBlockingTest {
+        val viewModel = MainViewModel(this)
         viewModel.process(ViewEvent.Instant)
         assert(viewModel.viewState.receive().buttonClicked == ButtonClicked.INSTANT)
     }
 
     @Test
     fun `is one sec view event translated to one sec view state`() = runBlockingTest {
+        val viewModel = MainViewModel(this)
         viewModel.process(ViewEvent.OneSec)
         assert(viewModel.viewState.receive().buttonClicked == ButtonClicked.ONE_SEC)
     }
 
     @Test
     fun `is five sec view event translated to five sec view state`() = runBlockingTest {
+        val viewModel = MainViewModel(this)
         viewModel.process(ViewEvent.FiveSec)
         assert(viewModel.viewState.receive().buttonClicked == ButtonClicked.FIVE_SEC)
     }
